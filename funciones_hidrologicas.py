@@ -195,7 +195,7 @@ def analisis_frecuencias(var:np.array):
 
         return (q_10,q_90)
     
-def funcion_prueba():
+def funcion_prueba_2():
     pass
 
 
