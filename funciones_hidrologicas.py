@@ -194,6 +194,9 @@ def analisis_frecuencias(var:np.array):
         q_90 = np.interp(90, df_sort['Excedencia'], df_sort['variable'])
 
         return (q_10,q_90)
+    
+def funcion_prueba():
+    pass
 
 
 
