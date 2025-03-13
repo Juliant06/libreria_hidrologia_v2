@@ -178,10 +178,10 @@ def ciclo_anual(df:pd.DataFrame, umbral:float) -> pd.DataFrame:
     
     return ciclo_anual
 
-def analisis_frecuencias(var:np.array):
+def analisis_frecuencias(df,var:np.array):
         
         # Crea array con los datos de interes
-        var = np.array(df[col])
+        var = np.array(df[var])
         # Crea dataframe
         df_analisis = pd.DataFrame({'variable': var})
         # Estimacion excedencia
@@ -194,6 +194,50 @@ def analisis_frecuencias(var:np.array):
         q_90 = np.interp(90, df_sort['Excedencia'], df_sort['variable'])
 
         return (q_10,q_90)
+    
+def tormentas(df:pd.DataFrame, mit:int)->pd.DataFrame:
+
+    # Importante: El dataframe debe ser solo el indice en formato datetime
+    # y el valor de la precipitacion.
+    # El codigo te regresa el dataframe inicial 
+    # Con una columna nueva con un identificador numerico, que identifica el evento de precipitacion.
+
+    # Identifica la columna que contiene laprecipitacion = df.columns[0]
+    precipitacion = df.columns[0]
+    # Definir el umbral de tiempo (número de ceros consecutivos que delimitan tormentas)
+    # se divide por 15 dado que es el diferencial de tiempo de epm
+    # Se debe programar mejor para que tome cualquier evento
+    umbral_ceros = mit/15
+
+    # Inicializar variables
+    evento_id = 0
+    en_evento = False
+    eventos = []
+
+    # Iterar sobre la serie de tiempo
+    for i, lluvia in enumerate(df[precipitacion]):
+        if lluvia > 0:
+            if not en_evento:  # Iniciar un nuevo evento
+                evento_id += 1
+                en_evento = True
+            eventos.append(evento_id)  # Asignar el evento actual
+        else:
+            # Verificar si hay suficientes ceros consecutivos después de un valor > 0
+            conteo_ceros = 1
+            for j in range(i + 1, len(df[precipitacion])):
+                if df[precipitacion].iloc[j] == 0:
+                    conteo_ceros += 1
+                else:
+                    break
+            # Si los ceros consecutivos superan el umbral, terminar el evento
+            if conteo_ceros >= umbral_ceros:
+                en_evento = False
+            eventos.append(evento_id if en_evento else 0)
+
+    df['Evento'] = eventos
+
+    # Mostrar el DataFrame con eventos identificados
+    return df
 
 
 
