@@ -195,6 +195,7 @@ def analisis_frecuencias(df,var:np.array):
 
         return (q_10,q_90)
     
+<<<<<<< HEAD
 def tormentas(df:pd.DataFrame, mit:int)->pd.DataFrame:
 
     # Importante: El dataframe debe ser solo el indice en formato datetime
@@ -238,6 +239,10 @@ def tormentas(df:pd.DataFrame, mit:int)->pd.DataFrame:
 
     # Mostrar el DataFrame con eventos identificados
     return df
+=======
+def funcion_prueba_2():
+    pass
+>>>>>>> 3726d2d006f3e6f30c7e0c77db3ed9f166ffdd45
 
 
 
