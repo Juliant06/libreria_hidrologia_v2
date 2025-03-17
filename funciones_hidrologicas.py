@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import re
 import geopandas as gpd
+import xarray as xr
+import scipy.stats as stats
 
 # llenado de estaciones
 def llenar_na(df):
@@ -57,8 +59,6 @@ def pptn_media_anual(df,
     media_anual = np.mean(datos_anuales)
     
     return media_anual
-
-
 
 def razon_normal(df):
 
@@ -195,7 +195,6 @@ def analisis_frecuencias(df,var:np.array):
 
         return (q_10,q_90)
     
-<<<<<<< HEAD
 def tormentas(df:pd.DataFrame, mit:int)->pd.DataFrame:
 
     # Importante: El dataframe debe ser solo el indice en formato datetime
@@ -239,16 +238,99 @@ def tormentas(df:pd.DataFrame, mit:int)->pd.DataFrame:
 
     # Mostrar el DataFrame con eventos identificados
     return df
-=======
-def funcion_prueba_2():
-    pass
->>>>>>> 3726d2d006f3e6f30c7e0c77db3ed9f166ffdd45
 
-
-
-
+class caudales_extremos:
     
-
+    def __init__(self,df:pd.DataFrame):
+        
+        self.df = df
     
+    def q_min_max(self,fn) -> np.array:
 
+        # Extrae la columna que almacena los caudales
+        col = self.df.columns[0]
+
+        # Se resamplea de manera anual para extraer máximos y minimos
+        if fn == 'max':
+            q_extremo = self.df.resample('YE').max()
+        else: 
+            q_extremo = self.df.resample('YE').min()
+        
+        # Se eliman valores NA
+        q_extremo = q_extremo.dropna()
+        array_extremos = q_extremo[col].values
+
+        # regresa un array con los datos
+        return array_extremos
+
+    def frecuencias(self,fn) -> dict:
+
+        data = self.q_min_max(fn)
+        dic_dist = dict()
+        distributions = [stats.gumbel_r, 
+                         stats.lognorm, 
+                         stats.pearson3]
+
+        for distribution in distributions:
+            # Extrae el nombre de la distribucion
+            distribucion = distribution.name
+            #Ajusta la fdp
+            params = distribution.fit(data)
+            # Aplica prueba de bondad de ajuste    
+            ks_statistic, ks_pvalue = stats.kstest(data, distribution.name, args=params)
+            # Almacena resultados
+            dic_dist[distribucion] = (ks_statistic,ks_pvalue)
+
+        return dic_dist
+
+    def fdp(self,fn):
+        
+        dic_dist = self.frecuencias(fn)
+        
+        #Delimitacion datos en dataframe
+        df_fdps = pd.DataFrame(dic_dist,index=['estadistico','p_value']).T
+        # filtro por p_values validos
+        mask = df_fdps['p_value']>0.05
+        df_fdps_filtro = df_fdps[mask]
+        
+        # Si el dataframe está vacio 
+        # Notificar que ninguna fdp se ajsuta
+        if len(df_fdps_filtro) == 0:
+            print('Revisar datos, ninguna función se ajusta')
+        # Se regresa como ganadora la función que los mejores ajustes
+        else:
+            # Estadistico con menor valor
+            min = df_fdps_filtro['estadistico'].min()
+            # Determinacion funcion mejor ajuste
+            fdp_ajuste = df_fdps_filtro[df_fdps_filtro['estadistico']==min]
+        
+        return fdp_ajuste
     
+    def caudales_diseño(self,fn:str) ->list:
+        
+        # Serie de caudales
+        data = self.q_min_max(fn)
+        # Seleccion funciones de distribución
+        fn_ajuste = self.fdp(fn)
+        fdp = fn_ajuste.index[0]
+        print(fdp)
+        distribution = getattr(stats, fdp)
+        # Periodos de retorno
+        tr = [2.33,5,10,25,50,100]
+        q_tr = list()
+        for periodo in tr:
+            # Estimacion periodo de retorno caudal
+            if fn == 'max':
+                p_periodo = 1 - 1/periodo
+            else:
+                p_periodo = 1/periodo
+            # Ajuste de la fdp
+            params = distribution.fit(data)
+            q_retorno = distribution.ppf(p_periodo,*params)
+            # Almacenamiento de los datos
+            q_tr.append(q_retorno)
+        
+        return q_tr
+    
+    def curva_duracion(self,)->list:
+        pass
