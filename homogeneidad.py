@@ -61,6 +61,59 @@ def pettit(df,var):
 
     return result
 
+def outliers_desvest(df:pd.DataFrame,k=3.0):
+
+    #Frecuencia de los datos
+    idx = df.index
+    freq = idx.inferred_freq
+    # Vector de caudales
+    col = df.columns[0]
+    media = np.nanmean(df[col])
+    std = np.nanstd(df[col])
+
+    # Estimacion umbrales
+    umbral_superior = media + k*std
+    umbral_inferior = media - k*std
+    print(umbral_superior,umbral_inferior)
+    # Copia del dataframe para no sobreescribir el original
+
+    # Datos acotados
+    df_acotado = df[(df[col] < umbral_superior)]
+    outliers = df[(df[col] > umbral_superior)]
+    # Re arreglo de los datos
+    inicio = df_acotado.index[0]
+    fin = df_acotado.index[-1]
+    new_idx = pd.date_range(inicio,fin,freq=freq)
+    df_acotado_ = df_acotado.reindex(new_idx)
+    
+    
+    return df_acotado_, outliers
+
+def percentiles(df:pd.DataFrame):
+    
+    #Frecuencia de los datos
+    idx = df.index
+    freq = idx.inferred_freq
+    
+    #Vector de caudales
+    col = df.columns[0]
+    
+    lim_superior = np.nanpercentile(df,99)
+    lim_inferior = np.nanpercentile(df,1)
+    
+    # Datos acotados
+    df_acotado = df[(df[col] < lim_superior)]
+    outliers = df[(df[col] > lim_superior)]
+    # Re arreglo de los datos
+    inicio = df_acotado.index[0]
+    fin = df_acotado.index[-1]
+    new_idx = pd.date_range(inicio,fin,freq=freq)
+    df_acotado_ = df_acotado.reindex(new_idx)
+    
+    return df_acotado_, outliers
+    
+    
+
 def plot_pettit(df,var):
     
     # Columna con datos

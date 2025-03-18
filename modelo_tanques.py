@@ -16,6 +16,8 @@ class modelo_tanques:
                 tr_2:float,
                 tr_3:float,
                 tr_4:float,
+                alpha:float,
+                beta:float,
                 h:float,
                 area:float,
                 param_lluvia:float):
@@ -44,8 +46,8 @@ class modelo_tanques:
         self.tr_2 = tr_2 # Tiempo de residencia
         self.tr_3 = tr_3 # Tiempo de residencia
         self.tr_4 = tr_4 # Tiempo de residencia
-        self.alpha = 2.0 #Exponente infiltracion
-        self.beta = 0.7 #Exponente evaporación
+        self.alpha = alpha #Exponente infiltracion
+        self.beta = beta #Exponente evaporación
         self.h = h #Altitud msnm
         self.area = area
     
