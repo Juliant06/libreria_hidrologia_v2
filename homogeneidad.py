@@ -112,7 +112,6 @@ def percentiles(df:pd.DataFrame):
     
     return df_acotado_, outliers
     
-    
 
 def plot_pettit(df,var):
     

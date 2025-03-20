@@ -4,6 +4,7 @@ import re
 import geopandas as gpd
 import xarray as xr
 import scipy.stats as stats
+import matplotlib.pyplot as plt
 
 # llenado de estaciones
 def llenar_na(df):
@@ -239,6 +240,32 @@ def tormentas(df:pd.DataFrame, mit:int)->pd.DataFrame:
     # Mostrar el DataFrame con eventos identificados
     return df
 
+def curva_duracion(caudal:np.array):
+        # Arreglos de caudales
+        caudal_sorted = np.sort(caudal)[::-1]
+        caudal_sorted = caudal_sorted[~(np.isnan(caudal_sorted))]
+        
+        
+        # 📌 Calcular la frecuencia de no excedencia (percentiles)
+        n_obs = len(caudal_sorted)
+        prob_exce = np.arange(1, n_obs + 1) / n_obs * 100
+        # 📌 Graficar la curva de duración de caudales
+        
+        plt.figure(figsize=(10, 5))
+        plt.plot(prob_exce, caudal_sorted,
+                 linestyle="-", 
+                 color="blue", label="Observados")
+        
+        plt.xlabel("Porcentaje de tiempo excedido (%)")
+        plt.ylabel("Caudal (m³/s)")
+        plt.title("Curva de Duración de Caudales")
+        plt.grid(True, linestyle="--")
+        plt.legend()
+        plt.show()
+        
+        return prob_exce, caudal_sorted
+
+
 class caudales_extremos:
     
     def __init__(self,df:pd.DataFrame):
@@ -332,5 +359,178 @@ class caudales_extremos:
         
         return q_tr
     
-    def curva_duracion(self,)->list:
-        pass
+class caudales_ambientales:
+    
+    def __init__(self,df:pd.DataFrame):
+        
+        # Dataframe con los cuadales
+        self.df = df
+        
+        
+    def metodologia_1(self,):
+        
+        # Minimo historico
+        # Arreglos de caudales
+        caudal = self.df
+        caudal_array = self.df.iloc[:,0].values
+        caudal_sorted = np.sort(caudal_array)[::-1]
+        q_975 = np.quantile(caudal_sorted,0.025)
+        #Porcentaje de descuento
+        caudal_resample = caudal.resample('ME').mean()
+        ciclo_anual = caudal_resample.groupby(caudal_resample.index.month).mean()
+        pctg_descuento = np.min(ciclo_anual)*0.25
+        #Reducción por caudal ambiental
+        reduccion = 0.25*np.mean(caudal.resample('YE').mean())
+        
+        return q_975,pctg_descuento,reduccion
+    
+    def metodologia_irh(self):
+
+        # Arreglos de caudales
+        caudal = self.df
+        caudal_array = self.df.iloc[:,0].values
+        caudal_sorted = np.sort(caudal_array)[::-1]
+        caudal_sorted = caudal_sorted[~(np.isnan(caudal_sorted))]
+        
+        # Calcular la frecuencia de no excedencia (percentiles)
+        n_obs = len(caudal_sorted)
+        prob_exce = np.arange(1, n_obs + 1) / n_obs * 100
+        
+        # Estimacion IRH
+        q50 = np.quantile(caudal_sorted,0.5)
+        distancias = np.abs(caudal_sorted - q50)
+        minimo = np.nanmin(distancias)
+        idx = np.where(distancias==minimo)[0][0]
+        
+        #Area full
+        area_full = np.trapezoid(y=caudal_sorted,x=prob_exce)
+        
+        ## Slice de arrays
+        caudal_sorted_slice = caudal_sorted[idx:]
+        prob_exce_slice = prob_exce[idx:]
+        area_q50 = np.trapezoid(y=caudal_sorted_slice,
+                                x=prob_exce_slice)
+        area_rect = prob_exce[idx]*q50
+        numerador = area_q50 + area_rect
+        irh = np.round(numerador/area_full,2)
+        
+        # Determinacion regulacion hídrica
+        
+        if irh > 0.85:
+            calificacion = 'Muy alta retención y regulación de humedad'
+        elif irh > 0.75 and irh <= 0.85:
+            calificacion = 'Alta retención y regulación de humedad'
+        elif irh > 0.65 and irh <= 0.75:
+            calificacion = 'Media retención y regulación de humedad media'
+        elif irh > 0.5 and irh <= 0.65:
+            calificacion = 'Baja retención y regulación de humedad'
+        else:
+            calificacion = 'Muy baja retención y regulación de humedad'        
+        
+        return irh, calificacion
+    
+    
+    def clasificar_enso(self,):
+        
+        # Lectura del dataframe con el oni
+        url = 'https://raw.githubusercontent.com/Juliant06/libreria_hidrologia_v2/refs/heads/test_branch/oni_final.csv'
+        df_oni = pd.read_csv(url,index_col=0,
+                             parse_dates=[0])
+        df_clasificar = self.df
+        #Columna que contiene los caudales
+        columna = df_clasificar.columns[0]
+        
+        # Inicializamos con "Neutral"
+        df_oni['enso_phase'] = 'neutro'  
+        for i in range(len(df_oni) - 4):
+        # Tomamos una ventana de 5 meses consecutivos
+            window = df_oni['ONI'].iloc[i:i+5]
+            if all(window >= 0.5):
+                df_oni.iloc[i:i+4, 1] = 'niño'
+            elif all(window <= -0.5):
+                df_oni.iloc[i:i+4, 1] = 'niña'
+                
+        # Clasificacion datos con el oni
+        df_clasificar['month'] = df_clasificar.index.to_period('M')
+        df_oni['month'] = df_oni.index.to_period('M')
+        df_merged = pd.merge(df_clasificar, df_oni, on='month', how='left')
+        df_merged.index = df_clasificar.index
+        
+        df_clasificado = df_merged[[columna,'enso_phase']]
+        return df_clasificado
+    
+        
+    def media_movil(self,array:np.array,ventana=7):
+        media_movil = []
+        for i in range(len(array) - ventana + 1):
+            media = np.nanmean(array[i:i+ventana])
+            media_movil.append(media)
+        return media_movil
+        
+    def metodologia_3(self,):
+        
+        #Lectura de datos clasificados
+        df_clasificado = self.clasificar_enso()
+        dic_dfs_fases = dict()
+        # Fases del enso para discretizar datos
+        fases = df_clasificado['enso_phase'].unique()
+        
+        # For loop para generar las series
+        for fase in fases:
+            
+            mask = df_clasificado['enso_phase'] == fase
+            df_fase = df_clasificado[mask]
+            # almacenamiento de dataframes
+            dic_dfs_fases[fase] = df_fase
+        
+        # Extraccion del Q95
+        dic_q95 = dict()
+        for fase,df in dic_dfs_fases.items():
+            #lista con los valores
+            val_q95 = list()
+            for mes in range(1,13):
+                
+                mask = df.index.month == mes
+                df_mes = df[mask]
+                q_95 = np.nanquantile(df_mes['Valor'],0.05)
+                val_q95.append(q_95)
+            
+            dic_q95[fase] = val_q95
+        
+        # Conversion resultados a dataframe
+        df_q95 = pd.DataFrame(dic_q95,columns=fases)
+        
+        # Estimacion 7Q10
+        
+        
+        
+        return df_q95
+                
+                
+            
+            
+            
+        
+        
+        
+        
+        
+        
+        
+    
+
+
+        
+        
+        
+        
+        
+    
+        
+        
+        
+        
+        
+        
+        
+        

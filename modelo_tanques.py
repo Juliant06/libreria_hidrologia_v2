@@ -18,9 +18,9 @@ class modelo_tanques:
                 tr_4:float,
                 alpha:float,
                 beta:float,
+                param_lluvia:float,
                 h:float,
-                area:float,
-                param_lluvia:float):
+                area:float,):
         """_summary_
 
         Args:
@@ -187,6 +187,64 @@ class modelo_tanques:
     
     ### Funciones para correr el modelo ###
     
+    def curva_duracion(self,q_obs,q_sim):
+        # Arreglos de caudales
+        q_obs_sorted = np.sort(q_obs)[::-1]
+        q_sim_sorted = np.sort(q_sim)[::-1]
+        
+        # 📌 Calcular la frecuencia de no excedencia (percentiles)
+        n_obs = len(q_obs_sorted)
+        n_sim = len(q_sim_sorted)
+        prob_exce_obs = np.arange(1, n_obs + 1) / n_obs * 100
+        prob_exce_sim = np.arange(1, n_sim + 1) / n_sim * 100
+        # 📌 Graficar la curva de duración de caudales
+        
+        plt.figure(figsize=(10, 5))
+        
+        plt.plot(prob_exce_obs, q_obs_sorted,
+                 linestyle="-", 
+                 color="blue", label="Observados")
+        
+        plt.plot(prob_exce_sim, q_sim_sorted, 
+                 linestyle="-",alpha=0.8, 
+                 color="red", label="Simulados")
+        
+        plt.xlabel("Porcentaje de tiempo excedido (%)")
+        plt.ylabel("Caudal (m³/s)")
+        plt.title("Curva de Duración de Caudales")
+        plt.grid(True, linestyle="--", alpha=0.7)
+        plt.legend()
+        plt.show()
+        
+    def plot_resultados(self,q_obs,q_sim,pptn):
+        
+        fig, ax = plt.subplots(figsize=(12,6))
+
+        #Limites de los graficos
+        max_q = np.nanmax(q_obs)
+        max_pptn = np.nanmax(pptn)
+
+        ax.plot(np.array(q_obs), color="r",label='Observado')
+        ax.plot(q_sim,color='blue',label='Simulado',alpha=0.8)
+        ax.set_ylabel('Caudal [$m^3/s$]')
+        ax.set_ylim(0,max_q + 50)
+
+        # Create second axes, in order to get the bars from the top you can multiply 
+        # by -1
+        ax2 = ax.twinx()
+        ax2.plot(-np.array(pptn),color='black',label='precipitación')
+        ax2.set_ylabel('Precipitación [mm]')
+        ax2.set_ylim(-max_pptn-60,0)
+        # Leyendas
+        handles1, labels1 = ax.get_legend_handles_labels()
+        handles2, labels2 = ax2.get_legend_handles_labels()
+        # ax.legend(handles1 + handles2, labels1 + labels2, loc="best")
+
+        ax.legend(handles1 + handles2, labels1 + labels2, loc="upper center",
+                  bbox_to_anchor=(0.5, -0.05), ncol=3, frameon=False)
+        
+        plt.show()
+    
     def correr(self):
         """ Función que se encarga de correr todo el modelo
 
@@ -253,5 +311,3 @@ class modelo_tanques:
                 caudal_simulado.append(caudal)
                 flujo_base.append(fb)
         return caudal_simulado, flujo_base
-
-# 
