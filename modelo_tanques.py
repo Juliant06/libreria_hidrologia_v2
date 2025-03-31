@@ -78,23 +78,19 @@ class modelo_tanques:
         Returns:
             tuple: flujo excedente (x_2), escorrentía (y_1) y D1 cantidad de agua que entra al nivel estático
         """        
-        
         phi = 1 - (Hi/self.almac_capilar)**self.alpha
-    
         D1 = min(p*phi, self.almac_capilar - Hi)
-    
         # Salidas por evapotranspiracion
         y_1 = min(self.etp()*(Hi/self.almac_capilar)**self.beta,Hi)
         #Infiltracion
         x_2 = p - D1
         #actualizacion del almacenamiento capilar 
-    
         return x_2, y_1, D1
     
     
     def tanque_2(self, x_2, H2):
         """ Almacenamiento de flujo superficial
-
+        
         Args:
             x_2 (float): Flujo excedente del almacenamiento capilar
             H2 (float): Contenido de agua del tanque 2 en cada paso temporal
@@ -108,10 +104,8 @@ class modelo_tanques:
         a_2 = 1/self.tr_2
         # Salida por escorrentia 
         y_2 = a_2*H2
-    
         # Infiltracion
         x_3 = x_2 - D2
-    
         return y_2, x_3, D2
     
     def tanque_3(self, x_3, H3):
@@ -124,21 +118,18 @@ class modelo_tanques:
         Returns:
             tuple: flujo subsuperficial (y_3), percolación (x_4), D3 cantidad de agua que entra al tanque
         """        
-    
         # Entradas de agua al tanque
         D3 = max(0,x_3 - self.kp)
-    
         a_3 = 1/self.tr_3
         #Salidas de agua subsuperficial
         y_3 = a_3*H3
         # Percolacion
         x_4 = x_3 - D3
-    
         return y_3,x_4,D3
     
     def tanque_4(self, x_4, H4):
-        """Almacenamiento de flujo subterráneo
-
+        """Almacenamiento de flujo subterránea
+    
         Args:
             x_4 (float): percolación
             H4 (float): Contenido de agua del tanque 4 en cada paso temporal
@@ -146,13 +137,10 @@ class modelo_tanques:
         Returns:
             tuple: flujo base (y_4) y cantidad de agua que entra al tanque (D4)
         """        
-        
         D4 = max(0,x_4 - self.perdidas_subt)
         a_4 = 1/self.tr_4
         #Flujo base
         y_4 = a_4*H4
-    
-    
         return y_4, D4
     
     def flujo_base(self, y_4):
@@ -165,7 +153,6 @@ class modelo_tanques:
             float: Regresa el caudal (m3/dia) asociado al flujo base
         """        
         flujo_base = y_4*self.area*1000/86400
-
         return flujo_base
     
     def caudal(self,y_2,y_3,y_4):
@@ -179,10 +166,8 @@ class modelo_tanques:
         Returns:
             float: Caudal simulado (m3/dia)
         """        
-    
         # Calculo del caudal
         Q = (y_2 + y_3 + y_4)*self.area*1000/86400
-    
         return Q 
     
     ### Funciones para correr el modelo ###
@@ -244,6 +229,8 @@ class modelo_tanques:
                   bbox_to_anchor=(0.5, -0.05), ncol=3, frameon=False)
         
         plt.show()
+    
+    
     
     def correr(self):
         """ Función que se encarga de correr todo el modelo

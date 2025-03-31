@@ -466,6 +466,27 @@ class caudales_ambientales:
             media = np.nanmean(array[i:i+ventana])
             media_movil.append(media)
         return media_movil
+    
+    
+    def frecuencias_7q10(self,data:np.array) -> tuple:
+
+        distribution = stats.gumbel_r
+        tr = 10
+        # Extrae el nombre de la distribucion
+        distribucion = distribution.name
+        #Ajusta la fdp
+        params = distribution.fit(data)
+        # Aplica prueba de bondad de ajuste    
+        ks_statistic, ks_pvalue = stats.kstest(data, distribution.name, args=params)
+        # Almacena resultados
+        resultados_ks = (ks_statistic,ks_pvalue)
+        p_periodo = 1/tr
+        tr_10 = distribution.ppf(p_periodo,*params)
+        
+        # A partir del ajuste estimar el Tr 10 años
+        
+
+        return tr_10, resultados_ks
         
     def metodologia_3(self,):
         
@@ -502,9 +523,39 @@ class caudales_ambientales:
         
         # Estimacion 7Q10
         
+        # media movil
+        dic_7q10 = dict()
+        for fase,df in dic_dfs_fases.items():
+            
+            #Copia para no afectar el dataframe original
+            df = df.copy()
+            #Media movil por fase
+            df['media_movil'] = df['Valor'].copy().rolling(window=7).mean().shift(1)
+            # Resampleo de los datos
+            df_res_min = pd.DataFrame(df['media_movil'].resample('ME').min())
+            # Valor q10
+            valores_q10 = list()
+            # Se debe delimitar por mes
+            for mes in range(1,13):
+                # Delimitacion mes de analisis
+                mask = df_res_min.index.month == mes
+                df_mes = df_res_min[mask]
+                #Dropeo de NA
+                datos_limpios = df_mes.dropna()
+                #Estimacion Q10 
+                datos_analisis = datos_limpios.iloc[:,0].values
+                q_10 = self.frecuencias_7q10(datos_analisis)[0]
+                #Guardado de datos
+                valores_q10.append(q_10)
+                
+            # Almacenamiento de datos
+            dic_7q10[fase] = valores_q10
         
+        df_7q10 = pd.DataFrame(dic_7q10,columns=fases)
         
-        return df_q95
+        return df_q95, df_7q10
+                
+
                 
                 
             
