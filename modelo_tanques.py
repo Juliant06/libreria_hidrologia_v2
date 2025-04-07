@@ -61,6 +61,21 @@ class modelo_tanques:
     
     ### Ecuaciones del modelo ###
     
+    def cond_iniciales(self,) -> list:
+        
+        # Retorn las condiciones iniciales
+        # utilizadas para correr la simulacion
+        
+        condiciones = [
+            self.almac_capilar_0,
+            self.almac_agua_superficial,
+            self.almac_z_sup,
+            self.almac_z_inf,
+        ]
+        
+        return condiciones
+        
+    
     #Metodo budyko cenicafe
     def etp(self):
         etp = 4.658*np.exp(-0.0002*self.h)

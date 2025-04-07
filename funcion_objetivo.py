@@ -41,5 +41,30 @@ def minimos(array_obs:np.array, array_sim:np.array) -> float:
     
 def rmse(array_obs:np.array, array_sim:np.array) -> float:
     
-    pass
+    # Elimina los valores NaN
+    obs = array_obs[~np.isnan(array_obs)]
+    # Numero de observaciones
+    n_obs = len(obs)
+    sum = np.nansum((array_obs - array_sim)**2)
+    # Estima el error
+    error = np.round(np.sqrt(sum/n_obs),3)
+    
+    return error
+
+def rmse_modificado(array_obs:np.array, array_sim:np.array) -> float:
+    
+    # RMSE modificado aplica raiz cuadrada a los valores 
+    # observados y simulados y estima el error
+
+    # Elimina los valores NaN
+    obs = array_obs[~np.isnan(array_obs)]
+    # Numero de observaciones
+    n_obs = len(obs)
+    sum = np.nansum((np.sqrt(array_obs) - np.sqrt(array_sim))**2)
+    # Estima el error
+    error = np.round(np.sqrt(sum/n_obs),3)
+    
+    return error
+    
+    
     
