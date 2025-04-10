@@ -323,7 +323,7 @@ class caudales_extremos:
         # Si el dataframe está vacio 
         # Notificar que ninguna fdp se ajsuta
         if len(df_fdps_filtro) == 0:
-            print('Revisar datos, ninguna función se ajusta')
+            raise Exception('Revisar datos, ninguna función se ajusta')
         # Se regresa como ganadora la función que los mejores ajustes
         else:
             # Estadistico con menor valor
@@ -340,7 +340,7 @@ class caudales_extremos:
         # Seleccion funciones de distribución
         fn_ajuste = self.fdp(fn)
         fdp = fn_ajuste.index[0]
-        print(fdp)
+        # print(fdp)
         distribution = getattr(stats, fdp)
         # Periodos de retorno
         tr = [2.33,5,10,25,50,100]
@@ -358,6 +358,9 @@ class caudales_extremos:
             q_tr.append(q_retorno)
         
         return q_tr
+
+# Agregar funcion para estimacion de multiples series
+# Se puede alterar la funcion actual
     
 class caudales_ambientales:
     
@@ -388,7 +391,7 @@ class caudales_ambientales:
 
         # Arreglos de caudales
         caudal = self.df
-        caudal_array = self.df.iloc[:,0].values
+        caudal_array = caudal.iloc[:,0].values
         caudal_sorted = np.sort(caudal_array)[::-1]
         caudal_sorted = caudal_sorted[~(np.isnan(caudal_sorted))]
         
@@ -403,12 +406,12 @@ class caudales_ambientales:
         idx = np.where(distancias==minimo)[0][0]
         
         #Area full
-        area_full = np.trapezoid(y=caudal_sorted,x=prob_exce)
+        area_full = np.trapz(y=caudal_sorted,x=prob_exce)
         
         ## Slice de arrays
         caudal_sorted_slice = caudal_sorted[idx:]
         prob_exce_slice = prob_exce[idx:]
-        area_q50 = np.trapezoid(y=caudal_sorted_slice,
+        area_q50 = np.trapz(y=caudal_sorted_slice,
                                 x=prob_exce_slice)
         area_rect = prob_exce[idx]*q50
         numerador = area_q50 + area_rect
@@ -436,7 +439,7 @@ class caudales_ambientales:
         url = 'https://raw.githubusercontent.com/Juliant06/libreria_hidrologia_v2/refs/heads/test_branch/oni_final.csv'
         df_oni = pd.read_csv(url,index_col=0,
                              parse_dates=[0])
-        df_clasificar = self.df
+        df_clasificar = self.df.copy()
         #Columna que contiene los caudales
         columna = df_clasificar.columns[0]
         
@@ -453,7 +456,10 @@ class caudales_ambientales:
         # Clasificacion datos con el oni
         df_clasificar['month'] = df_clasificar.index.to_period('M')
         df_oni['month'] = df_oni.index.to_period('M')
-        df_merged = pd.merge(df_clasificar, df_oni, on='month', how='left')
+        df_merged = pd.merge(df_clasificar, 
+                             df_oni, 
+                             on='month', 
+                             how='left')
         df_merged.index = df_clasificar.index
         
         df_clasificado = df_merged[[columna,'enso_phase']]
@@ -490,6 +496,8 @@ class caudales_ambientales:
         
     def metodologia_3(self,):
         
+        # Extraccion columna de interes
+        col = self.df.columns[0]
         #Lectura de datos clasificados
         df_clasificado = self.clasificar_enso()
         dic_dfs_fases = dict()
@@ -513,7 +521,7 @@ class caudales_ambientales:
                 
                 mask = df.index.month == mes
                 df_mes = df[mask]
-                q_95 = np.nanquantile(df_mes['Valor'],0.05)
+                q_95 = np.nanquantile(df_mes[col],0.05)
                 val_q95.append(q_95)
             
             dic_q95[fase] = val_q95
@@ -529,8 +537,11 @@ class caudales_ambientales:
             
             #Copia para no afectar el dataframe original
             df = df.copy()
+            # Extrae la columna de interes 
+            # Se puede generalizar mejor
+            col = df.columns[0]
             #Media movil por fase
-            df['media_movil'] = df['Valor'].copy().rolling(window=7).mean().shift(1)
+            df['media_movil'] = df[col].copy().rolling(window=7).mean().shift(1)
             # Resampleo de los datos
             df_res_min = pd.DataFrame(df['media_movil'].resample('ME').min())
             # Valor q10
