@@ -160,6 +160,76 @@ def plot_pettit(df,var):
     plt.tight_layout()
     # plt.savefig(path_guardado)
     # plt.close()
+    
+def grubbs_beck(data:np.array) -> np.array:
+    
+    # Estimacion de la media
+    # Estimacion de la desviacion
+    log_data = np.log(data)
+    log_mean = np.mean(log_data)
+    log_std = np.std(np.log_data)
+    
+    # tamaño de muestra 
+    n_sample = len(data)
+    # estimación K(N)
+    if n_sample > 5 and n_sample < 150:
+        
+        log_n = np.log(n_sample)
+        k_n = -0.9043 + 3.345 * np.sqrt(log_n) - 0.4046 * log_n
+    
+    else:
+        k_n = -3.62201 + 6.2844 * (n_sample**(1/4)) \
+            -2.49835 * (n_sample**(1/2)) + 0.491436 * (n_sample**(3/4)) \
+            - 0.037911 * n_sample
+    
+    # Umbral superior e inferior
+    x_h = np.exp(log_mean + k_n * log_std)
+    x_l = np.exp(log_mean - k_n * log_std)
+    
+    # Estimacion outliers
+    # Esta mascara extrae los outliers
+    mask = (data < x_l) | (data > x_h)
+    outliers = data[mask]
+    # Condicion inversa para retener los datos
+    data_clean = data[~mask]
+    
+    return data_clean, outliers
+
+# Esta parte esta en proceso de mejora
+def plot_grubbs_beck(df:pd.DataFrame,data:np.array):
+    
+    plt.figure(figsize=(10,12))
+    
+    # Prueba Grubbs_beck
+    data_clean, outliers = grubbs_beck(data)
+    
+    # Seleccion datos limpios
+    mask_data_clean = df.iloc[:,0] == data_clean
+    df_data_clean = df[mask_data_clean]
+
+    if len(outliers) == 0:
+        print('No se presentan outliers')
+
+    else: 
+
+        mask_outliers = df.iloc[:,0] == outliers
+        df_outliers = df[mask_outliers]
+
+        plt.plot(df_data_clean,color='blue')
+        plt.plot(df_outliers,label='outlier',color='red')
+
+        plt.title('Detección de outliers',font_size=15)
+        plt.grid()
+        plt.legend(font_size=12)
+    
+    
+    
+    
+            
+        
+    
+    
+    
 
 
 
