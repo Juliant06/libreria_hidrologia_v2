@@ -102,7 +102,11 @@ def info_estacion(df:pd.DataFrame,codigo:int) -> dict:
     # Es la forma en la cual el CNE lo lee
     codigo = int(codigo)
 
-    cne = pd.read_csv('Cat_logo_Nacional_de_Estaciones_del_IDEAM_20240627.csv',
+    path_catalogo = 'https://raw.githubusercontent.com/Juliant06/' \
+                'libreria_hidrologia_v2/refs/heads/test_branch/data' \
+                '/Cat_logo_Nacional_de_Estaciones_del_IDEAM_20240627.csv'
+    
+    cne = pd.read_csv(path_catalogo,
                       index_col='Codigo')
     # Extracción de coordenadas en texto plano
     cne_index = cne.index
