@@ -440,7 +440,10 @@ class caudales_ambientales:
     def clasificar_enso(self,):
         
         # Lectura del dataframe con el oni
-        url = 'https://raw.githubusercontent.com/Juliant06/libreria_hidrologia_v2/refs/heads/test_branch/data/oni_final.csv'
+        url = 'https://raw.githubusercontent.com/Juliant06/ \
+                libreria_hidrologia_v2/refs/heads/test_branch\
+                /data/oni_final.csv'
+        
         df_oni = pd.read_csv(url,index_col=0,
                              parse_dates=[0])
         df_clasificar = self.df.copy()
