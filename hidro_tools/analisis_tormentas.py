@@ -17,6 +17,62 @@ class tormenta:
         self.estacion = estacion
         self.path = path
 
+    def variables_tormenta(df:pd.DataFrame, path:str) -> pd.DataFrame:
+
+        eventos = df['Evento'].unique()
+        # Se elimnan los eventos 0
+        mask = eventos != 0
+        eventos_limpios = eventos[mask]
+    
+        #Dataframe de almacenamiento de datos
+        df_vars = dict()
+        for evento in eventos_limpios:
+        
+            df_evento = df[df['Evento'] == evento]
+    
+            # Se desechan eventos 
+            # con con un solo dato
+            if len(df_evento) <= 1:
+                continue
+            # Crea la llave para el evento
+            df_vars[evento] = []
+    
+            # Fecha cuando inicial el evento
+            fecha_evento = df_evento.index[0]
+            fecha_siguiente = df_evento.index[1]
+            fecha_final = df_evento.index[-1]
+    
+            # Duracion
+            duracion = fecha_final - fecha_evento
+            duracion_evento = duracion.total_seconds()/60
+            #delta t
+            delta = fecha_siguiente - fecha_evento
+            delta_t = delta.total_seconds()/60
+            # Precipitacion acumulada/ Intensidad media
+            pptn_acumulada = df_evento['valor'].sum()
+            intensidad_media = pptn_acumulada/duracion_evento
+            # Intensidad maxima
+            df_evento = df_evento.copy()
+            df_evento.loc[:,'pptn_acum'] = df_evento['valor'].cumsum()
+            df_evento.loc[:,'intensidad'] = df_evento['pptn_acum'].diff()/delta_t
+            i_max = df_evento['intensidad'].max()
+    
+            # Almacenamiento de variables
+            df_vars[evento].append(fecha_evento)
+            df_vars[evento].append(duracion_evento)
+            df_vars[evento].append(pptn_acumulada)
+            df_vars[evento].append(intensidad_media)
+            df_vars[evento].append(i_max)
+    
+        columnas = ['fecha_evento','duracion','pptn_acumulada',
+                    'intensidad_media','intensidad_maxima']
+    
+        df_variables = pd.DataFrame(df_vars,index = columnas).T
+    
+        # Guardado de resultados
+    
+        df_variables.to_csv(path)
+
     # Funciones de extraccion de datos
     def ajuste_potencial(self,x_data:np.array,y_data:np.array):
 
