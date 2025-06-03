@@ -102,11 +102,13 @@ def info_estacion(df:pd.DataFrame,codigo:int) -> dict:
     # Es la forma en la cual el CNE lo lee
     codigo = int(codigo)
 
-    path_catalogo =  (
-        "https://raw.githubusercontent.com/Juliant06/"
-        "libreria_hidrologia_v2/refs/heads/test_branch/"
-        "data/oni_final.csv"
-        )
+    # Se define la ruta del catálogo de estaciones
+    path_catalogo = (
+            "https://raw.githubusercontent.com/Juliant06/"
+            "libreria_hidrologia_v2/refs/heads/test_branch/data/"
+            "Cat_logo_Nacional_de_Estaciones_del_IDEAM_20240627.csv"
+            )
+
     
     cne = pd.read_csv(path_catalogo,
                       index_col='Codigo')
@@ -442,9 +444,13 @@ class caudales_ambientales:
     def clasificar_enso(self,):
         
         # Lectura del dataframe con el oni
-        url = 'https://raw.githubusercontent.com/Juliant06/ \
-                libreria_hidrologia_v2/refs/heads/test_branch\
-                /data/oni_final.csv'
+        
+        url = (
+            "https://raw.githubusercontent.com/Juliant06/"
+            "libreria_hidrologia_v2/refs/heads/test_branch/"
+            "data/oni_final.csv"
+        )
+
         
         df_oni = pd.read_csv(url,index_col=0,
                              parse_dates=[0])
