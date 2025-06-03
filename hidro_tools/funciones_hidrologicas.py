@@ -102,9 +102,11 @@ def info_estacion(df:pd.DataFrame,codigo:int) -> dict:
     # Es la forma en la cual el CNE lo lee
     codigo = int(codigo)
 
-    path_catalogo = 'https://raw.githubusercontent.com/Juliant06/' \
-                'libreria_hidrologia_v2/refs/heads/test_branch/data' \
-                '/Cat_logo_Nacional_de_Estaciones_del_IDEAM_20240627.csv'
+    path_catalogo =  (
+        "https://raw.githubusercontent.com/Juliant06/"
+        "libreria_hidrologia_v2/refs/heads/test_branch/"
+        "data/oni_final.csv"
+        )
     
     cne = pd.read_csv(path_catalogo,
                       index_col='Codigo')
@@ -213,7 +215,7 @@ def tormentas(df:pd.DataFrame, mit:int)->pd.DataFrame:
     # se divide por 15 dado que es el diferencial de tiempo de epm
     # Se debe programar mejor para que tome cualquier evento
     umbral_ceros = mit/15
-
+    print(umbral_ceros)
     # Inicializar variables
     evento_id = 0
     en_evento = False
