@@ -407,6 +407,10 @@ class caudales_ambientales:
         n_obs = len(caudal_sorted)
         prob_exce = np.arange(1, n_obs + 1) / n_obs * 100
         
+        # Estimacion Q75 Q85
+        q75 = np.quantile(caudal_sorted,0.25)
+        q85 = np.quantile(caudal_sorted,0.15)
+
         # Estimacion IRH
         q50 = np.quantile(caudal_sorted,0.5)
         distancias = np.abs(caudal_sorted - q50)
@@ -421,7 +425,7 @@ class caudales_ambientales:
         prob_exce_slice = prob_exce[idx:]
         area_q50 = np.trapz(y=caudal_sorted_slice,
                                 x=prob_exce_slice)
-        area_rect = prob_exce[idx]*q50
+        area_rect = prob_exce[idx] * q50
         numerador = area_q50 + area_rect
         irh = np.round(numerador/area_full,2)
         
@@ -438,7 +442,7 @@ class caudales_ambientales:
         else:
             calificacion = 'Muy baja retención y regulación de humedad'        
         
-        return irh, calificacion
+        return irh, q75, q85
     
     
     def clasificar_enso(self,):
