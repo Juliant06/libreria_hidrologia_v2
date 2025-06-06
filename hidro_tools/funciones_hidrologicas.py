@@ -385,7 +385,7 @@ class caudales_ambientales:
         caudal = self.df
         caudal_array = self.df.iloc[:,0].values
         caudal_sorted = np.sort(caudal_array)[::-1]
-        q_975 = np.quantile(caudal_sorted,0.025)
+        q_975 = np.nanquantile(caudal_sorted,0.025)
         #Porcentaje de descuento
         caudal_resample = caudal.resample('ME').mean()
         ciclo_anual = caudal_resample.groupby(caudal_resample.index.month).mean()
