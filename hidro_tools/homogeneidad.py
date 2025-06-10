@@ -161,7 +161,9 @@ def plot_pettit(df:pd.DataFrame,
     
     # Titulos y etiquetas
     
-    plt.title(f'Test Pettit estación {estacion}')
+    plt.title(f'Test Pettit estación {estacion}',
+              fontsize=15)
+    
     plt.xlabel('Años',fontsize=14)
     plt.ylabel('Precipitación[mm]',fontsize=14)
     plt.xticks(fontsize=12)
