@@ -115,7 +115,8 @@ def percentiles(df:pd.DataFrame):
 
 def plot_pettit(df:pd.DataFrame,
                 var:str, 
-                estacion:str):
+                estacion:str,
+                path_guardado:str):
     
     # Columna con datos
     col = df.columns[0]
@@ -167,8 +168,8 @@ def plot_pettit(df:pd.DataFrame,
     plt.yticks(fontsize=12)
     plt.legend(loc='upper right',fontsize=13)
     plt.tight_layout()
-    # plt.savefig(path_guardado)
-    # plt.close()
+    plt.savefig(path_guardado)
+    plt.close()
     
 def grubbs_beck(data:np.array) -> np.array:
     
