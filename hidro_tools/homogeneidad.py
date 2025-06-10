@@ -113,7 +113,9 @@ def percentiles(df:pd.DataFrame):
     return df_acotado_, outliers
     
 
-def plot_pettit(df,var):
+def plot_pettit(df:pd.DataFrame,
+                var:str, 
+                estacion:str):
     
     # Columna con datos
     col = df.columns[0]
@@ -142,16 +144,23 @@ def plot_pettit(df,var):
     plt.hlines(mu1, xmin=mn, xmax=loc, 
                linestyles='--', colors='orange',
                lw=1.5, label='mu1 : ' + str(round(mu1,2)))
+    
     plt.hlines(mu2, xmin=loc, xmax=mx, 
                linestyles='--', colors='g', lw=1.5, 
                label='mu2 : ' + str(round(mu2,2)))
 
     plt.axvline(x=loc, linestyle='-.' , color='red', 
-                lw=1.5, label='Change point : '+ loc.strftime('%Y-%m-%d') + '\n p-value : ' + str(p_value))
+                lw=1.5, label='Change point : '+ \
+                    loc.strftime('%Y-%m-%d') + \
+                    '\n p-value : ' + \
+                    str(p_value))
+    
     plt.ylim(min_valor)
     plt.grid()
- 
-
+    
+    # Titulos y etiquetas
+    
+    plt.title(f'Test Pettit estación {estacion}')
     plt.xlabel('Años',fontsize=14)
     plt.ylabel('Precipitación[mm]',fontsize=14)
     plt.xticks(fontsize=12)

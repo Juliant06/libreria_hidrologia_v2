@@ -44,8 +44,26 @@ def read_data(archivo):
     
     return df_lleno
 
-def pptn_media_anual(df,
+def pptn_media_anual(df:pd.DataFrame,
                      umbral=0.1):
+    
+    fecha_inicio = df.index[0]
+    fecha_final = df.index[-1]
+    # Generacion lista con fecha
+    rango_fechas = pd.date_range(fecha_inicio,
+                                 fecha_final,
+                                 freq='d')
+    
+
+    nro_fechas = len(rango_fechas) 
+    nro_fechas_df = df.shape[0]
+
+    
+    if nro_fechas_df != nro_fechas:
+        # LLena el dataframe con las fechas faltantes
+        df_lleno = llenar_na(df)
+    else:
+        df_lleno = df.copy()
     
     # Se rellena el dataframe con datos NA
     df_lleno = llenar_na(df)
