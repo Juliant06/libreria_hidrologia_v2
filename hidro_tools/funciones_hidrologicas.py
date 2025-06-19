@@ -383,7 +383,7 @@ class caudales_extremos:
             # Almacenamiento de los datos
             q_tr.append(q_retorno)
         
-        return q_tr
+        return q_tr, fn_ajuste
 
 # Agregar funcion para estimacion de multiples series
 # Se puede alterar la funcion actual
