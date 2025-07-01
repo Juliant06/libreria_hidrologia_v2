@@ -5,6 +5,7 @@ import geopandas as gpd
 import xarray as xr
 import scipy.stats as stats
 import matplotlib.pyplot as plt
+import os
 
 # llenado de estaciones
 def llenar_na(df):
@@ -267,7 +268,9 @@ def tormentas(df:pd.DataFrame, mit:int)->pd.DataFrame:
     return df
 
 def curva_duracion(caudal:np.array, 
-                   estacion:str = None):
+                   estacion:str = None,
+                   path:str = None):
+    
         # Arreglos de caudales
         caudal_sorted = np.sort(caudal)[::-1]
         caudal_sorted = caudal_sorted[~(np.isnan(caudal_sorted))]
@@ -291,7 +294,14 @@ def curva_duracion(caudal:np.array,
             plt.title(f'Curva de Duración de Caudales {estacion}')
         plt.grid(True, linestyle="--")
         plt.legend()
-        plt.show()
+        
+        # Chequea si se desea guardar la figura
+        if path is None:
+            plt.show()
+        else: 
+            archivo = estacion +'.png'
+            nombre_figura = os.path.join(path,archivo)
+            plt.savefig(nombre_figura, bbox_inches='tight')
         
         return prob_exce, caudal_sorted
 
