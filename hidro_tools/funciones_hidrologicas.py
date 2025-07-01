@@ -266,7 +266,8 @@ def tormentas(df:pd.DataFrame, mit:int)->pd.DataFrame:
     # Mostrar el DataFrame con eventos identificados
     return df
 
-def curva_duracion(caudal:np.array):
+def curva_duracion(caudal:np.array, 
+                   estacion:str = None):
         # Arreglos de caudales
         caudal_sorted = np.sort(caudal)[::-1]
         caudal_sorted = caudal_sorted[~(np.isnan(caudal_sorted))]
@@ -284,7 +285,10 @@ def curva_duracion(caudal:np.array):
         
         plt.xlabel("Porcentaje de tiempo excedido (%)")
         plt.ylabel("Caudal (m³/s)")
-        plt.title("Curva de Duración de Caudales")
+        if estacion is None:
+            plt.title("Curva de Duración de Caudales")
+        else:
+            plt.title(f'Curva de Duración de Caudales {estacion}')
         plt.grid(True, linestyle="--")
         plt.legend()
         plt.show()
