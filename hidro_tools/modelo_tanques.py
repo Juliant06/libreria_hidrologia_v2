@@ -53,11 +53,11 @@ class modelo_tanques:
     
         # Condiciones iniciales 
         # Cantidad de agua en el tanque al momento de la modelacion
-        self.almac_capilar_0 = random.uniform(0,120)  #60.0
-        self.almac_agua_superficial = random.uniform(0,10) #5.0
-        self.almac_z_sup = random.uniform(0,30)  #15
-        self.almac_z_inf = random.uniform(0,2000) #1000
-    
+        self.almac_capilar_0 = 0.5 * almac_capilar
+        self.almac_agua_superficial = tr_2 * 1.0   # valores de arranque razonables
+        self.almac_z_sup = tr_3 * 1.0
+        self.almac_z_inf = tr_4 * 1.0
+
     
     ### Ecuaciones del modelo ###
     
