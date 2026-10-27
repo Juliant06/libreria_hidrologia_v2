@@ -1,70 +1,67 @@
-import numpy as np 
+import numpy as np
 import pandas as pd
 
+
+def _pares(array_obs, array_sim):
+    """ Devuelve obs y sim solo en los días donde AMBOS son válidos (no NaN).
+    Así todas las métricas se calculan sobre exactamente los mismos días. """
+    obs = np.asarray(array_obs, dtype=float)
+    sim = np.asarray(array_sim, dtype=float)
+    mask = ~(np.isnan(obs) | np.isnan(sim))
+    return obs[mask], sim[mask]
+
+
+def _nse(obs, sim):
+    numerador = np.sum((obs - sim) ** 2)
+    denominador = np.sum((obs - obs.mean()) ** 2)
+    return np.around(1 - numerador / denominador, 5)
+
+
 def nash_sqrt(array_obs, array_sim):
+    with np.errstate(invalid='ignore'):
+        obs, sim = _pares(np.sqrt(np.asarray(array_obs, dtype=float)),
+                          np.sqrt(np.asarray(array_sim, dtype=float)))
+    return _nse(obs, sim)
 
-    numerador = np.nansum([np.square(np.sqrt(i) - np.sqrt(j)) for i,j in zip(array_obs,array_sim)])
-    denominador = np.nansum([np.square(np.sqrt(i) - np.nanmean(np.sqrt(array_obs))) for i in array_obs])
-    nash = np.around(1 - numerador/denominador,5)
-    
-    return nash
-    
-def nash_log(array_obs, array_sim):
 
-    numerador = np.nansum([np.square(np.log(i) - np.log(j)) for i,j in zip(array_obs,array_sim)])
-    denominador = np.nansum([np.square(np.log(i) - np.nanmean(np.log(array_obs))) for i in array_obs])
-    nash = np.around(1 - numerador/denominador,5)
-    return nash
+def nash_log(array_obs, array_sim, eps=1e-3):
+    # eps evita log(0) = -inf cuando hay caudales nulos
+    with np.errstate(invalid='ignore'):
+        obs, sim = _pares(np.log(np.asarray(array_obs, dtype=float) + eps),
+                          np.log(np.asarray(array_sim, dtype=float) + eps))
+    return _nse(obs, sim)
+
 
 def nash(array_obs, array_sim):
+    obs, sim = _pares(array_obs, array_sim)
+    return _nse(obs, sim)
 
-    numerador = np.nansum([np.square(i - j) for i,j in zip(array_obs,array_sim)])
-    denominador = np.nansum([np.square(i - np.nanmean(array_obs)) for i in array_obs])
-    nash = np.around( 1- numerador/denominador,5)
 
-    return nash
+def balance(array_obs: np.array, array_sim: np.array, absoluto: bool = True) -> float:
+    # Error porcentual en el balance (BE, ec. 17 del artículo). Óptimo = 0 %.
+    # absoluto=False conserva el signo: positivo = el modelo subestima el volumen.
+    obs, sim = _pares(array_obs, array_sim)
+    be = 100 * (obs.mean() - sim.mean()) / obs.mean()
+    return np.abs(be) if absoluto else be
 
-def balance(array_obs:np.array, array_sim:np.array) -> float:
-    mean_sim = np.nanmean(array_sim)
-    mean_obs = np.nanmean(array_obs)
 
-    balance = 100*np.abs(mean_obs-mean_sim)/mean_obs
-    
-    return balance
+def minimos(array_obs: np.array, array_sim: np.array) -> float:
+    obs, sim = _pares(array_obs, array_sim)
+    q05_sim = np.quantile(sim, 0.05)
+    q05_obs = np.quantile(obs, 0.05)
 
-def minimos(array_obs:np.array, array_sim:np.array) -> float:
-    q05_sim = np.nanquantile(array_sim,0.05)
-    q05_obs = np.nanquantile(array_obs,0.05)
-
-    q_05 = 100*np.abs(q05_obs-q05_sim)/q05_obs    
+    q_05 = 100 * np.abs(q05_obs - q05_sim) / q05_obs
     return q_05
-    
-def rmse(array_obs:np.array, array_sim:np.array) -> float:
-    
-    # Elimina los valores NaN
-    obs = array_obs[~np.isnan(array_obs)]
-    # Numero de observaciones
-    n_obs = len(obs)
-    sum = np.nansum((array_obs - array_sim)**2)
-    # Estima el error
-    error = np.round(np.sqrt(sum/n_obs),3)
-    
-    return error
 
-def rmse_modificado(array_obs:np.array, array_sim:np.array) -> float:
-    
-    # RMSE modificado aplica raiz cuadrada a los valores 
-    # observados y simulados y estima el error
 
-    # Elimina los valores NaN
-    obs = array_obs[~np.isnan(array_obs)]
-    # Numero de observaciones
-    n_obs = len(obs)
-    sum = np.nansum((np.sqrt(array_obs) - np.sqrt(array_sim))**2)
-    # Estima el error
-    error = np.round(np.sqrt(sum/n_obs),3)
-    
-    return error
-    
-    
-    
+def rmse(array_obs: np.array, array_sim: np.array) -> float:
+    obs, sim = _pares(array_obs, array_sim)
+    return np.round(np.sqrt(np.mean((obs - sim) ** 2)), 3)
+
+
+def rmse_modificado(array_obs: np.array, array_sim: np.array) -> float:
+    # RMSE sobre la raíz cuadrada de los caudales observados y simulados
+    with np.errstate(invalid='ignore'):
+        obs, sim = _pares(np.sqrt(np.asarray(array_obs, dtype=float)),
+                          np.sqrt(np.asarray(array_sim, dtype=float)))
+    return np.round(np.sqrt(np.mean((obs - sim) ** 2)), 3)
