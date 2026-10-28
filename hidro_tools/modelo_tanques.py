@@ -395,3 +395,71 @@ class modelo_tanques:
             registro['q_05'].append(fobj.minimos(obs, sim))
 
         return pd.DataFrame(registro), simulaciones
+    
+    @classmethod
+    def calibrar(cls, pptn, q_obs, cota, area, fobj,
+                 rangos=None, fijos=None, pesos=None,
+                 calentamiento=0, penalizacion=10.0,
+                 maxiter=60, popsize=10, seed=None):
+        """ Busca el set de parámetros que maximiza un puntaje combinado
+        (Nash, Nash_mod y Balance) usando evolución diferencial.
+
+        Returns:
+            tuple: (dict con los mejores parámetros, caudal simulado con ese set, puntaje)
+        """
+        from scipy.optimize import differential_evolution
+
+        pptn = np.asarray(pptn, dtype=float)
+        q_obs = np.asarray(q_obs, dtype=float)
+        if len(pptn) != len(q_obs):
+            raise ValueError('No coinciden las longitudes de pptn y q_obs (revisar fechas)')
+
+        rangos = {**cls.RANGOS, **(rangos or {})}
+        fijos = fijos or {}
+        pesos = pesos or {'Nash': 0.4, 'Nash_mod': 0.4, 'Balance': 0.2}
+        obs = q_obs[calentamiento:]
+
+        # 1. Solo se buscan los parámetros que NO están fijos
+        libres = [k for k in cls.NOMBRES_PARAMS if k not in fijos]
+        limites = [rangos[k] for k in libres]
+
+        # 2. Convierte el vector x del optimizador en el dict completo de parámetros
+        def armar_params(x):
+            valores = dict(zip(libres, x))
+            return {k: fijos[k] if k in fijos else valores[k] for k in cls.NOMBRES_PARAMS}
+
+        # 3. Función que el optimizador MINIMIZA (= menos el puntaje)
+        def error(x):
+            p = armar_params(x)
+
+            # Coherencia física del artículo: si no se cumple, se penaliza sin correr el modelo
+            if not (p['ks'] > p['kp'] and p['tr_2'] <= p['tr_3'] <= p['tr_4']):
+                return penalizacion
+
+            modelo = cls(pptn, *p.values(), cota, area)
+            q_sim, _ = modelo.correr()
+            sim = np.asarray(q_sim)[calentamiento:]
+
+            nash = fobj.nash(obs, sim)
+            nash_mod = fobj.nash_sqrt(obs, sim)
+            balance = fobj.balance(obs, sim)   # en %, valor absoluto
+
+            # Puntaje: más Nash es mejor, más error de balance es peor
+            puntaje = (pesos['Nash'] * nash
+                       + pesos['Nash_mod'] * nash_mod
+                       - pesos['Balance'] * balance / 100)
+
+            if np.isnan(puntaje):
+                return penalizacion
+            return -puntaje
+
+        # 4. Optimización
+        res = differential_evolution(error, limites,
+                                     maxiter=maxiter, popsize=popsize,
+                                     seed=seed, polish=False)
+
+        # 5. Se corre el modelo una vez más con el mejor set
+        mejores = armar_params(res.x)
+        q_sim, _ = cls(pptn, *mejores.values(), cota, area).correr()
+
+        return mejores, np.asarray(q_sim), -res.fun
