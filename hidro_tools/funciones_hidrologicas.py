@@ -306,101 +306,94 @@ def curva_duracion(caudal:np.array,
         return prob_exce, caudal_sorted
 
 
-class caudales_extremos:
-    
-    def __init__(self,df:pd.DataFrame):
-        
+class CaudalesExtremos:
+
+    DISTS = {
+        'max': {'gumbel_r': stats.gumbel_r,
+                'genextreme': stats.genextreme,
+                'lognorm': stats.lognorm,
+                'pearson3': stats.pearson3},
+        'min': {'gumbel_l': stats.gumbel_l,
+                'weibull_min': stats.weibull_min,
+                'lognorm': stats.lognorm,
+                'pearson3': stats.pearson3},
+    }
+
+    def __init__(self, df: pd.DataFrame):
         self.df = df
-    
-    def q_min_max(self,fn) -> np.array:
 
-        # Extrae la columna que almacena los caudales
-        col = self.df.columns[0]
+    def serie_anual(self, fn: str, ventana: int = 1,
+                    min_completitud: float = 0.9,
+                    mes_inicio: int = 1) -> pd.Series:
+        if fn not in ('max', 'min'):
+            raise ValueError("fn debe ser 'max' o 'min'")
 
-        # Se resamplea de manera anual para extraer máximos y minimos
-        if fn == 'max':
-            q_extremo = self.df.resample('YE').max()
-        else: 
-            q_extremo = self.df.resample('YE').min()
-        
-        # Se eliman valores NA
-        q_extremo = q_extremo.dropna()
-        array_extremos = q_extremo[col].values
+        q = self.df.iloc[:, 0].asfreq('D')
+        if ventana > 1:                      # p.ej. ventana=7 para 7Q
+            q = q.rolling(ventana, min_periods=ventana).mean()
 
-        # regresa un array con los datos
-        return array_extremos
+        # Año hidrológico: termina el mes anterior a mes_inicio
+        freq = 'YE' if mes_inicio == 1 else f'YE-{pd.Timestamp(2000, mes_inicio - 1, 1):%b}'.upper()
+        crudo = self.df.iloc[:, 0].asfreq('D')
+        n_validos = crudo.resample(freq).count()
+        n_esperados = crudo.resample(freq).size()
+        completo = (n_validos / n_esperados) >= min_completitud
 
-    def frecuencias(self,fn) -> dict:
+        agg = q.resample(freq).max() if fn == 'max' else q.resample(freq).min()
+        serie = agg[completo].dropna()
 
-        data = self.q_min_max(fn)
-        dic_dist = dict()
-        distributions = [stats.gumbel_r, 
-                         stats.lognorm, 
-                         stats.pearson3]
+        if len(serie) < 15:
+            print(f'Aviso: solo {len(serie)} años válidos; '
+                  'la extrapolación a Tr altos es poco confiable.')
+        return serie
 
-        for distribution in distributions:
-            # Extrae el nombre de la distribucion
-            distribucion = distribution.name
-            #Ajusta la fdp
-            params = distribution.fit(data)
-            # Aplica prueba de bondad de ajuste    
-            ks_statistic, ks_pvalue = stats.kstest(data, distribution.name, args=params)
-            # Almacena resultados
-            dic_dist[distribucion] = (ks_statistic,ks_pvalue)
+    def ajustar(self, serie: pd.Series, fn: str) -> pd.DataFrame:
+        data = serie.values
+        filas = {}
+        for nombre, dist in self.DISTS[fn].items():
+            try:
+                params = dist.fit(data)
+                ll = np.sum(dist.logpdf(data, *params))
+                k = len(params)
+                aic = 2 * k - 2 * ll
+                bic = k * np.log(len(data)) - 2 * ll
+                ks = stats.kstest(data, dist.name, args=params).statistic
+                filas[nombre] = dict(params=params, AIC=aic, BIC=bic, KS=ks)
+            except Exception:
+                continue
+        res = pd.DataFrame(filas).T.sort_values('AIC')
+        return res
 
-        return dic_dist
+    def caudales_diseno(self, fn: str, ventana: int = 1,
+                        tr=(2, 5, 10, 25, 50, 100),
+                        min_completitud: float = 0.9,
+                        mes_inicio: int = 1,
+                        n_boot: int = 500, alfa: float = 0.05):
+        serie = self.serie_anual(fn, ventana, min_completitud, mes_inicio)
+        tabla = self.ajustar(serie, fn)
+        mejor = tabla.index[0]
+        dist = self.DISTS[fn][mejor]
+        params = tabla.loc[mejor, 'params']
 
-    def fdp(self,fn):
-        
-        dic_dist = self.frecuencias(fn)
-        
-        #Delimitacion datos en dataframe
-        df_fdps = pd.DataFrame(dic_dist,index=['estadistico','p_value']).T
-        # filtro por p_values validos
-        mask = df_fdps['p_value']>0.05
-        df_fdps_filtro = df_fdps[mask]
-        
-        # Si el dataframe está vacio 
-        # Notificar que ninguna fdp se ajsuta
-        if len(df_fdps_filtro) == 0:
-            raise Exception('Revisar datos, ninguna función se ajusta')
-        # Se regresa como ganadora la función que los mejores ajustes
-        else:
-            # Estadistico con menor valor
-            min = df_fdps_filtro['estadistico'].min()
-            # Determinacion funcion mejor ajuste
-            fdp_ajuste = df_fdps_filtro[df_fdps_filtro['estadistico']==min]
-        
-        return fdp_ajuste
-    
-    def caudales_diseño(self,fn:str) ->list:
-        
-        # Serie de caudales
-        data = self.q_min_max(fn)
-        # Seleccion funciones de distribución
-        fn_ajuste = self.fdp(fn)
-        fdp = fn_ajuste.index[0]
-        # print(fdp)
-        distribution = getattr(stats, fdp)
-        # Periodos de retorno
-        tr = [2.33,5,10,25,50,100]
-        q_tr = list()
-        for periodo in tr:
-            # Estimacion periodo de retorno caudal
-            if fn == 'max':
-                p_periodo = 1 - 1/periodo
-            else:
-                p_periodo = 1/periodo
-            # Ajuste de la fdp
-            params = distribution.fit(data)
-            q_retorno = distribution.ppf(p_periodo,*params)
-            # Almacenamiento de los datos
-            q_tr.append(q_retorno)
-        
-        return q_tr, fn_ajuste
+        tr = np.asarray(tr, dtype=float)
+        p = 1 - 1 / tr if fn == 'max' else 1 / tr
+        q_tr = dist.ppf(p, *params)
 
-# Agregar funcion para estimacion de multiples series
-# Se puede alterar la funcion actual
+        # Bootstrap paramétrico para intervalos de confianza
+        rng = np.random.default_rng(0)
+        boot = []
+        for _ in range(n_boot):
+            muestra = dist.rvs(*params, size=len(serie), random_state=rng)
+            try:
+                pb = dist.fit(muestra)
+                boot.append(dist.ppf(p, *pb))
+            except Exception:
+                continue
+        boot = np.array(boot)
+        lo, hi = np.nanpercentile(boot, [100 * alfa / 2, 100 * (1 - alfa / 2)], axis=0)
+
+        out = pd.DataFrame({'Tr': tr, 'Q': q_tr, 'IC_inf': lo, 'IC_sup': hi})
+        return out, tabla, serie
     
 class caudales_ambientales:
     
