@@ -365,7 +365,7 @@ class CaudalesExtremos:
         return res
 
     def caudales_diseno(self, fn: str, ventana: int = 1,
-                        tr=(2, 5, 10, 25, 50, 100),
+                        tr=(2.33, 5, 10, 25, 50, 100),
                         min_completitud: float = 0.9,
                         mes_inicio: int = 1,
                         n_boot: int = 500, alfa: float = 0.05):
