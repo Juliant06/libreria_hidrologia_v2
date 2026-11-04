@@ -305,6 +305,51 @@ def curva_duracion(caudal:np.array,
         
         return prob_exce, caudal_sorted
 
+def clasificar_enso(df):
+        
+        # Lectura del dataframe con el oni
+        
+        url = (
+            "https://raw.githubusercontent.com/Juliant06/"
+            "libreria_hidrologia_v2/refs/heads/test_branch/"
+            "data/oni_final.csv"
+        )
+
+        
+        df_oni = pd.read_csv(
+            url,
+            index_col=0,
+            parse_dates=[0]
+        )
+        df_clasificar = df.copy()
+        #Columna que contiene los caudales
+        columna = df_clasificar.columns[-1]
+        
+        # Inicializamos con "Neutral"
+        df_oni['enso_phase'] = 'neutro'  
+        for i in range(len(df_oni) - 4):
+        # Tomamos una ventana de 5 meses consecutivos
+            window = df_oni['RONI'].iloc[i:i+5]
+            if all(window >= 0.5):
+                df_oni.iloc[i:i+4, 1] = 'niño'
+            elif all(window <= -0.5):
+                df_oni.iloc[i:i+4, 1] = 'niña'
+                
+        # Clasificacion datos con el oni
+        df_clasificar['month'] = df_clasificar.index.to_period('M')
+        df_oni['month'] = df_oni.index.to_period('M')
+        df_merged = pd.merge(
+            df_clasificar, 
+            df_oni, 
+            on='month', 
+            how='left'
+        )
+
+        df_merged.index = df_clasificar.index
+        
+        df_clasificado = df_merged[[columna,'enso_phase']]
+        return df_clasificado
+
 
 class CaudalesExtremos:
 
