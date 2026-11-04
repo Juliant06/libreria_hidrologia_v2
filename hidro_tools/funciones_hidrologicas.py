@@ -297,29 +297,6 @@ def curva_duracion(caudal:np.array,
         # 📌 Calcular la frecuencia de no excedencia (percentiles)
         n_obs = len(caudal_sorted)
         prob_exce = np.arange(1, n_obs + 1) / n_obs * 100
-        # 📌 Graficar la curva de duración de caudales
-        
-        plt.figure(figsize=(10, 5))
-        plt.plot(prob_exce, caudal_sorted,
-                 linestyle="-", 
-                 color="blue", label="Observados")
-        
-        plt.xlabel("Porcentaje de tiempo excedido (%)")
-        plt.ylabel("Caudal (m³/s)")
-        if estacion is None:
-            plt.title("Curva de Duración de Caudales")
-        else:
-            plt.title(f'Curva de Duración de Caudales {estacion}')
-        plt.grid(True, linestyle="--")
-        plt.legend()
-        
-        # Chequea si se desea guardar la figura
-        if path is None:
-            plt.show()
-        else: 
-            archivo = estacion +'.png'
-            nombre_figura = os.path.join(path,archivo)
-            plt.savefig(nombre_figura, bbox_inches='tight')
         
         return prob_exce, caudal_sorted
 
