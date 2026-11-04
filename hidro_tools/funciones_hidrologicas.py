@@ -190,21 +190,39 @@ def shape_estaciones(df):
 
     return gdf
 
-def ciclo_anual(df:pd.DataFrame, umbral:float) -> pd.DataFrame:
+def ciclo_anual(
+        df: pd.DataFrame,
+        umbral: float,
+        var: str
+    ) -> pd.DataFrame:
 
-    # Se rellena el dataframe con datos NA
+    if var not in ('pptn', 'caudal'):
+        raise ValueError("var debe ser 'pptn' o 'caudal'")
+
+    # Se rellena el dataframe con fechas faltantes (NaN)
     df_lleno = llenar_na(df)
-    #Se agregan los datos faltantes de manera mensual
-    df_faltantes = df_lleno.isna().resample('ME').sum()/31
-    # Se agregan los datos de manera mensual
-    df_mensual = df_lleno.resample('ME').sum()
-    # Filtro de datos
+
+    # Fracción de datos faltantes por mes (real, según los días de cada mes)
+    n_faltantes = df_lleno.isna().resample('ME').sum()
+    n_esperados = df_lleno.resample('ME').size()
+    df_faltantes = n_faltantes.div(n_esperados, axis=0)
+
+    # Agregación mensual según el tipo de variable
+    if var == 'pptn':
+        # Precipitación: se acumula en el mes (min_count=1 evita que un mes
+        # completamente vacío salga como 0 en lugar de NaN)
+        df_mensual = df_lleno.resample('ME').sum(min_count=1)
+    else:
+        # Caudal: se promedia en el mes
+        df_mensual = df_lleno.resample('ME').mean()
+
+    # Filtro de meses con demasiados datos faltantes
     datos_mensual = df_mensual[df_faltantes < umbral]
-    #Generacion del ciclo anual
-    ciclo_anual = datos_mensual.groupby(datos_mensual.index.month).mean()
-    # Estimacion de la media anual
-    
-    return ciclo_anual
+
+    # Ciclo anual: promedio multianual de cada mes
+    ciclo = datos_mensual.groupby(datos_mensual.index.month).mean()
+
+    return ciclo
 
 def analisis_frecuencias(df,var:np.array):
         
